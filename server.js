@@ -13,43 +13,41 @@ const server = http.createServer((req, res) => {
 
   if (req.url === "/orders" && req.method === "POST") {
     let body = "";
-    req.on("data", chunk => (body += chunk));
+
+    req.on("data", chunk => {
+      body += chunk.toString(); // ✅ ensure string
+    });
+
     req.on("end", () => {
       try {
-        const data = JSON.parse(body);
+        console.log("📩 Raw body received:", body); // Debug
 
-        // 🛠 Debug log
-        console.log("📦 Received order data:", data);
+        const data = JSON.parse(body);
+        console.log("✅ Parsed data:", data); // Debug
 
         const orderTime = new Date();
         const deliveryTime = new Date(orderTime);
         deliveryTime.setDate(orderTime.getDate() + 7);
 
-        // Ensure products is always an array
-        const productsList = Array.isArray(data.products)
-          ? data.products.map(item => ({
-              ...item,
-              estimatedDeliveryTime: deliveryTime.toISOString(),
-              variation: null
-            }))
-          : [];
+        const productsList = (data.products || []).map(item => ({
+          ...item,
+          estimatedDeliveryTime: deliveryTime.toISOString(),
+          variation: null
+        }));
 
-        // Ensure totalPrice is a number
-        const totalPrice = Number(data.totalPrice) || 0;
-
-        // Build response
+        // Response
         const response = {
           id: randomUUID(),
           orderTime: orderTime.toISOString(),
           products: productsList,
-          cartQuantity: data.cartQuantity || 0,
-          totalPrice: totalPrice
+          cartQuantity: data.cartQuantity,
+          totalPrice: data.totalPrice
         };
 
         res.writeHead(201, { "Content-Type": "application/json" });
         res.end(JSON.stringify(response));
       } catch (err) {
-        console.error("❌ Error parsing request:", err);
+        console.error("❌ Parse error:", err.message);
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid JSON" }));
       }
