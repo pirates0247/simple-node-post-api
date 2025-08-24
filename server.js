@@ -1,12 +1,12 @@
 const http = require("http");
 
 const server = http.createServer((req, res) => {
-  // Set CORS headers for every response
-  res.setHeader("Access-Control-Allow-Origin", "*"); // allow all origins
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  // ✅ CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Handle preflight (OPTIONS)
+  // ✅ Preflight
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     return res.end();
@@ -15,22 +15,18 @@ const server = http.createServer((req, res) => {
   if (req.url === "/orders") {
     if (req.method === "POST") {
       let body = "";
-      req.on("data", chunk => {
-        body += chunk;
-      });
+      req.on("data", chunk => (body += chunk));
       req.on("end", () => {
         try {
           const data = JSON.parse(body);
-          if (!data.item || !data.quantity) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ error: "Send { item, quantity }" }));
-          }
+
+          // ✅ Just return whatever the client sent + an ID
           res.writeHead(201, { "Content-Type": "application/json" });
           res.end(JSON.stringify({
             orderId: Date.now(),
-            item: data.item,
-            quantity: data.quantity
+            received: data
           }));
+
         } catch {
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Invalid JSON" }));
