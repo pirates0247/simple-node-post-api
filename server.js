@@ -1,6 +1,17 @@
 const http = require("http");
 
 const server = http.createServer((req, res) => {
+  // Set CORS headers for every response
+  res.setHeader("Access-Control-Allow-Origin", "*"); // allow all origins
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Handle preflight (OPTIONS)
+  if (req.method === "OPTIONS") {
+    res.writeHead(204);
+    return res.end();
+  }
+
   if (req.url === "/orders") {
     if (req.method === "POST") {
       let body = "";
