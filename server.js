@@ -1,60 +1,45 @@
-const http = require("http");
-const { randomUUID } = require("crypto");
+import express from "express";
+import bodyParser from "body-parser";
+import { v4 as uuidv4 } from "uuid";
 
-const server = http.createServer((req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "OPTIONS, POST, GET");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+const app = express();
+app.use(bodyParser.json());
 
-  if (req.method === "OPTIONS") {
-    res.writeHead(204);
-    return res.end();
+// Save orders temporarily in memory
+let orders = [];
+
+// API to place order
+app.post("/api/orders", (req, res) => {
+  const { products, totalCostCents } = req.body;
+
+  if (!products || products.length === 0) {
+    return res.status(400).json({ error: "Cart is empty" });
   }
 
-  if (req.url === "/orders" && req.method === "POST") {
-    let body = "";
-    req.on("data", chunk => (body += chunk));
-    req.on("end", () => {
-      try {
-        const data = JSON.parse(body);
+  // Construct the order object
+  const newOrder = {
+    id: uuidv4(),
+    orderTime: new Date().toISOString(),
+    products: products.map(p => ({
+      productId: p.productId,
+      quantity: p.quantity || 1
+    })),
+    totalPrice: totalCostCents // coming from frontend
+  };
 
-        // 🔍 Debug log to confirm what frontend is sending
-        console.log("📥 Received order data from frontend:", data);
+  orders.push(newOrder);
 
-        const orderTime = new Date();
-        const deliveryTime = new Date(orderTime);
-        deliveryTime.setDate(orderTime.getDate() + 7);
+  console.log("Order saved:", newOrder);
 
-        const productsList = (data.products || []).map(item => ({
-          ...item,
-          estimatedDeliveryTime: deliveryTime.toISOString(),
-          variation: null
-        }));
-
-        // Build response with totalPrice
-        const response = {
-          id: randomUUID(),
-          orderTime: orderTime.toISOString(),
-          products: productsList,
-          cartQuantity: data.cartQuantity || 0,
-          totalPrice: data.totalPrice || 0
-        };
-
-        // 🔍 Debug log to confirm what server will send back
-        console.log("📤 Sending response back to frontend:", response);
-
-        res.writeHead(201, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(response));
-      } catch (err) {
-        console.error("❌ Error parsing JSON:", err);
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: "Invalid JSON" }));
-      }
-    });
-  } else {
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Not Found" }));
-  }
+  res.status(201).json(newOrder);
 });
 
-server.listen(3000, () => console.log("🚀 Server running on port 3000"));
+// API to fetch all orders
+app.get("/api/orders", (req, res) => {
+  res.json(orders);
+});
+
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
