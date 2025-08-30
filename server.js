@@ -13,17 +13,13 @@ const server = http.createServer((req, res) => {
 
   if (req.url === "/orders" && req.method === "POST") {
     let body = "";
-
-    req.on("data", chunk => {
-      body += chunk.toString(); // ✅ ensure string
-    });
-
+    req.on("data", chunk => (body += chunk));
     req.on("end", () => {
       try {
-        console.log("📩 Raw body received:", body); // Debug
-
         const data = JSON.parse(body);
-        console.log("✅ Parsed data:", data); // Debug
+
+        // 🔍 Debug log to confirm what frontend is sending
+        console.log("📥 Received order data from frontend:", data);
 
         const orderTime = new Date();
         const deliveryTime = new Date(orderTime);
@@ -35,19 +31,22 @@ const server = http.createServer((req, res) => {
           variation: null
         }));
 
-        // Response
+        // Build response with totalPrice
         const response = {
           id: randomUUID(),
           orderTime: orderTime.toISOString(),
           products: productsList,
-          cartQuantity: data.cartQuantity,
-          totalPrice: data.totalPrice
+          cartQuantity: data.cartQuantity || 0,
+          totalPrice: data.totalPrice || 0
         };
+
+        // 🔍 Debug log to confirm what server will send back
+        console.log("📤 Sending response back to frontend:", response);
 
         res.writeHead(201, { "Content-Type": "application/json" });
         res.end(JSON.stringify(response));
       } catch (err) {
-        console.error("❌ Parse error:", err.message);
+        console.error("❌ Error parsing JSON:", err);
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid JSON" }));
       }
