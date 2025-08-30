@@ -1,45 +1,52 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { v4 as uuidv4 } from "uuid";
+import cors from "cors";
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(cors());
 app.use(bodyParser.json());
 
-// Save orders temporarily in memory
+// In-memory store (clears on restart) 👉 replace with DB if you need persistence
 let orders = [];
 
-// API to place order
-app.post("/api/orders", (req, res) => {
-  const { products, totalCostCents } = req.body;
+// 📌 Save order (POST)
+app.post("/orders", (req, res) => {
+  const { cart, totalPrice, deliveryDate } = req.body;
 
-  if (!products || products.length === 0) {
-    return res.status(400).json({ error: "Cart is empty" });
+  if (!cart || !totalPrice || !deliveryDate) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Construct the order object
   const newOrder = {
-    id: uuidv4(),
-    orderTime: new Date().toISOString(),
-    products: products.map(p => ({
-      productId: p.productId,
-      quantity: p.quantity || 1
-    })),
-    totalPrice: totalCostCents // coming from frontend
+    id: orders.length + 1,
+    cart,
+    totalPrice,
+    deliveryDate,
+    timestamp: new Date().toISOString()
   };
 
   orders.push(newOrder);
 
-  console.log("Order saved:", newOrder);
-
-  res.status(201).json(newOrder);
+  res.status(201).json({
+    message: "✅ Order saved successfully",
+    order: newOrder
+  });
 });
 
-// API to fetch all orders
-app.get("/api/orders", (req, res) => {
+// 📌 Get all orders (GET)
+app.get("/orders", (req, res) => {
   res.json(orders);
 });
 
-const PORT = 5000;
+// 📌 Get one order by ID (GET)
+app.get("/orders/:id", (req, res) => {
+  const order = orders.find(o => o.id === parseInt(req.params.id));
+  if (!order) return res.status(404).json({ error: "Order not found" });
+  res.json(order);
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
