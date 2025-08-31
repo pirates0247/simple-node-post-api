@@ -4,43 +4,37 @@ import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 app.use(cors());
 app.use(bodyParser.json());
 
-// In-memory store (clears on restart) 👉 replace with DB if you need persistence
+// In-memory store (clears on restart)
 let orders = [];
 
-// 📌 Save order (POST)
+// Save order (POST)
 app.post("/orders", (req, res) => {
-  const { cart, totalPrice, deliveryDate } = req.body;
-
-  if (!cart || !totalPrice || !deliveryDate) {
+  const { cart, totalPrice } = req.body;
+  if (!cart || !totalPrice) {
     return res.status(400).json({ error: "Missing required fields" });
   }
-
   const newOrder = {
     id: orders.length + 1,
     cart,
     totalPrice,
-    deliveryDate,
     timestamp: new Date().toISOString()
   };
-
   orders.push(newOrder);
-
   res.status(201).json({
     message: "✅ Order saved successfully",
     order: newOrder
   });
 });
 
-// 📌 Get all orders (GET)
+// Get all orders (GET)
 app.get("/orders", (req, res) => {
   res.json(orders);
 });
 
-// 📌 Get one order by ID (GET)
+// Get one order by ID (GET)
 app.get("/orders/:id", (req, res) => {
   const order = orders.find(o => o.id === parseInt(req.params.id));
   if (!order) return res.status(404).json({ error: "Order not found" });
